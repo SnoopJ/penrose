@@ -5,24 +5,20 @@ var sin = function(a) { return Math.sin(degToRad(a)) }
 
 var side = 100 
 
-// universal prototype for rhombs
-var rhomb = function() {}    
-rhomb.prototype = {
-    points : function() { return [ 
-        [0,0], 
-        [ side*cos(this.theta/2), side*sin(this.theta/2) ],
-        [ 2*side*cos(this.theta/2), 0], 
-        [ side*cos(this.theta/2), -side*sin(this.theta/2) ]
-    ] },
-    drawFun : function(canvas) {
+var drawnObj = function() {}
+drawnObj.prototype = {
+    points : function() { return [] },
+    draw : function() {
         pointsStr = ""
         for(var i=0; i<this.points.length; i++){
             pointsStr += this.points[i].toString() + " "
         }
+        canvas = d3.select("svg")
         this.drawable = canvas.append("polygon")
             .attr("points", pointsStr)
             .attr({ fill: this.color })
         this.update() // we wanna be in the right place/orientation
+        this.draw = this.update
         return this.drawable
     },
     drawable : null, // nothing until we're drawn
@@ -62,25 +58,67 @@ rhomb.prototype = {
     rotation: 0
 }
 
-var thickrhomb = function() {
-    this.theta = 72
-    this.alpha = 108
-    this.points = this.points()
-    this.position = [0,50]
-
-    this.color = "#FF0000"
+// class to contain the isosceles tris described in "Updown generation of Penrose patterns"
+// http://www.sciencedirect.com/science/article/pii/0019357790900058
+tri = function() {
+    this.points = [
+        [0,0],
+        [side/2 * cos(this.beta),side/2 * sin(this.beta)],
+        [0,side]
+    ]
 }
-thickrhomb.prototype = rhomb.prototype
 
-var thinrhomb = function() {
-    this.theta = 36
-    this.alpha = 144
+tri.prototype = $.extend({},drawnObj.prototype,{
+    alpha : 36, // the angle NOT on the cut
+    beta : 144/2, // the two angles on the cut (bisected from the rhomb)
+    points : function() { return [
+        [0,0],
+        [side/2 * cos(this.beta),side/2 * sin(this.beta)],
+        [0,side]
+    ]},
+})
+
+// universal prototype for rhombs
+var rhomb = function() {
     this.points = this.points()
-    this.position = [0,50]
+}    
+rhomb.prototype = $.extend({},drawnObj.prototype,{
+    points : function() { 
+        return [ 
+            [0,0], 
+            [ side*cos(this.theta/2), side*sin(this.theta/2) ],
+            [ 2*side*cos(this.theta/2), 0], 
+            [ side*cos(this.theta/2), -side*sin(this.theta/2) ]
+        ]
+    }
+})
 
-    this.color = "#0000FF"
+var thickrhomb = function() { 
+    rhomb.apply(this)
 }
-thinrhomb.prototype = rhomb.prototype
+thickrhomb.prototype = $.extend({},rhomb.prototype,{
+    theta : 72,
+    alpha : 108,
+    position : [0,50],
 
-thin = new thinrhomb(); thin.drawFun( d3.select("svg") )
-thick = new thickrhomb(); thick.drawFun( d3.select("svg") )
+    color : "#FF0000"
+})
+
+var thinrhomb = function() { 
+    rhomb.apply(this)
+}
+thinrhomb.prototype = $.extend({},rhomb.prototype,{
+    theta : 36,
+    alpha : 144,
+    position : [0,50],
+
+    color : "#0000FF"
+})
+
+mytri = new tri(); mytri.draw()
+thin = new thinrhomb(); thin.draw()
+thick = new thickrhomb(); thick.draw()
+thick.setRotation(thin.theta*3/2)
+thick.setPosition([-40,120])
+mytri.setRotation(45)
+mytri.setPosition([200,50])
