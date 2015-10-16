@@ -45,26 +45,51 @@ rhomb.prototype = {
         this.drawable = canvas.append("polygon")
             .attr("points", pointsStr)
             .attr({ fill: this.color })
+        this.update() // we wanna be in the right place/orientation
         return this.drawable
     },
     drawable : null, // nothing until we're drawn
-    center : function () { 
+    bbox : function () { 
         obj = this.drawable.node()
         bbox = $(obj)[0].getBBox() 
-        x = bbox.x + bbox.width/2
-        y = bbox.y + bbox.height/2
-        return [x,y]
+        return bbox
+    },
+    update : function() {
+        bbox = this.bbox()
+        center = [ bbox.x + bbox.width/2, bbox.y + bbox.height/2 ]
+        ang = this.rotation
+        this.drawable.attr("transform",
+                // order matters!
+                "translate("+this.position.toString()+") " + 
+                "rotate("+ang+" "+center[0]+" "+center[1]+") "
+                )
+    },
+    translate: function(offset) {
+        this.position[0] += offset[0]
+        this.position[1] += offset[1]
+        this.update()
+    },
+    setTranslation: function(pos) {
+        this.position = pos
+        this.update()
+    },
+    setRotation: function(ang) {
+        this.rotation = ang
+        this.update()
     },
     rotate : function(ang) {
-        center = this.center()
-        this.drawable.attr("transform", "rotate("+ang+" "+center[0]+" "+center[1]+")")
-    }
+        this.rotation += ang
+        this.update()
+    },
+    position: [0,0],
+    rotation: 0
 }
 
 var thickrhomb = function() {
     this.theta = degToRad(72)
     this.alpha = degToRad(108)
     this.points = this.points()
+    this.position = [0,50]
 
     this.color = "#FF0000"
 }
@@ -74,8 +99,11 @@ var thinrhomb = function() {
     this.theta = degToRad(36)
     this.alpha = degToRad(144)
     this.points = this.points()
+    this.position = [0,50]
 
     this.color = "#0000FF"
 }
 thinrhomb.prototype = rhomb.prototype
 
+thin = new thinrhomb(); thin.drawFun( d3.select("svg") )
+thick = new thickrhomb(); thick.drawFun( d3.select("svg") )
