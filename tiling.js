@@ -4,8 +4,14 @@ var cos = function(a) { return Math.cos(degToRad(a)) }
 var sin = function(a) { return Math.sin(degToRad(a)) }
 
 var side = 100 
+var svg = d3.select("svg").node()
 
-var drawnObj = function() {}
+SVGMatrix.prototype.m = function() { return [this.a,this.b,this.c,this.d,this.e,this.f] }
+I = svg.createSVGMatrix()
+
+var drawnObj = function() {
+    this.matrix = svg.createSVGMatrix()
+}
 drawnObj.prototype = {
     bbox : function () { 
         obj = this.node
@@ -17,19 +23,21 @@ drawnObj.prototype = {
         bbox = this.bbox()
         center = [ bbox.x + bbox.width/2, bbox.y + bbox.height/2 ]
         ang = this.rotation
+        this.matrix = I
+            .translate(this.x,this.y)
+            .rotate(this.rotation)
         d3.select(this.node).attr("transform",
-                // order matters!
-                "translate("+this.position.toString()+") " + 
-                "rotate("+ang+" "+center[0]+" "+center[1]+") "
+                "matrix("+ this.matrix.m().join(' ') +")"
                 )
     },
-    translate: function(offset) {
-        this.position[0] += offset[0]
-        this.position[1] += offset[1]
+    translate: function(x,y) {
+        this.x += x
+        this.y += y
         this.draw()
     },
-    setPosition: function(pos) {
-        this.position = pos
+    setPosition: function(x,y) {
+        this.x = x
+        this.y = y
         this.draw()
     },
     setRotation: function(ang) {
@@ -40,7 +48,8 @@ drawnObj.prototype = {
         this.rotation += ang
         this.draw()
     },
-    position: [0,0],
+    x: 0,
+    y: 0,
     rotation: 0
 }
 
@@ -49,7 +58,9 @@ var drawGroup = function() {
 }
 drawGroup.prototype = $.extend({},drawnObj.prototype,{})
 
-var poly = function() {}
+var poly = function() {
+    drawnObj.apply(this)
+}
 poly.prototype = $.extend({},drawnObj.prototype,{
     points : function() { return [] },
     color : "#00FF00",
@@ -62,6 +73,8 @@ poly.prototype = $.extend({},drawnObj.prototype,{
         this.drawable = canvas.append("polygon")
             .attr("points", pointsStr)
             .attr({ fill: this.color })
+//            .classed("draggable",true)
+//            .attr("onmousedown","selectElement(evt)")
         this.node = this.drawable.node()
         this.update() // we wanna be in the right place/orientation
         this.draw = this.update // done with first-time creation, drawing means updating, now
@@ -72,6 +85,7 @@ poly.prototype = $.extend({},drawnObj.prototype,{
 // classes to contain the isosceles tris described in "Updown generation of Penrose patterns"
 // http://www.sciencedirect.com/science/article/pii/0019357790900058
 tri = function() {
+    poly.apply(this)
     this.points = [
         [0,side*cos(this.beta)],
         [side * sin(this.beta),0],
@@ -173,11 +187,11 @@ rhombA = d3.select("svg").append("g").attr("id","rhombA");
 mytri = new triA(); 
 mytri.draw()
 mytri.setRotation(0)
-mytri.setPosition([200,300])
+mytri.setPosition(200,300)
 
 mytri2 = new triAp();
 mytri2.draw()
-mytri2.setPosition([200,300])
+mytri2.setPosition(200,300)
 
 rhombA.node().appendChild(mytri.drawable.node())
 rhombA.node().appendChild(mytri2.drawable.node())
@@ -186,12 +200,13 @@ rhombB = d3.select("svg").append("g").attr("id","rhombB");
 mytri3 = new triB(); 
 mytri3.draw()
 mytri3.setRotation(0)
-mytri3.setPosition([200,300])
+mytri3.setPosition(200,300)
 
 mytri4 = new triBp();
 mytri4.draw()
 mytri4.setRotation(0)
-mytri4.setPosition([200,300])
+mytri4.setPosition(200,300)
 
 rhombB.node().appendChild(mytri3.drawable.node())
 rhombB.node().appendChild(mytri4.drawable.node())
+
