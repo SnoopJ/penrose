@@ -7,32 +7,17 @@ var side = 100
 
 var drawnObj = function() {}
 drawnObj.prototype = {
-    points : function() { return [] },
-    color : "#00FF00",
-    draw : function() {
-        pointsStr = ""
-        for(var i=0; i<this.points.length; i++){
-            pointsStr += this.points[i].toString() + " "
-        }
-        canvas = d3.select("svg")
-        this.drawable = canvas.append("polygon")
-            .attr("points", pointsStr)
-            .attr({ fill: this.color })
-        this.update() // we wanna be in the right place/orientation
-        this.draw = this.update
-        return this.drawable
-    },
-    drawable : null, // nothing until we're drawn
     bbox : function () { 
-        obj = this.drawable.node()
+        obj = this.node
         bbox = $(obj)[0].getBBox() 
         return bbox
     },
+    draw : function() { this.update() },
     update : function() { // won't call this directly, but once draw() does its thing, it'll map here
         bbox = this.bbox()
         center = [ bbox.x + bbox.width/2, bbox.y + bbox.height/2 ]
         ang = this.rotation
-        this.drawable.attr("transform",
+        d3.select(this.node).attr("transform",
                 // order matters!
                 "translate("+this.position.toString()+") " + 
                 "rotate("+ang+" "+center[0]+" "+center[1]+") "
@@ -59,32 +44,64 @@ drawnObj.prototype = {
     rotation: 0
 }
 
-// class to contain the isosceles tris described in "Updown generation of Penrose patterns"
+var drawGroup = function() {
+    this.node = document.createElementNS("http://www.w3.org/2000/svg","g")
+}
+drawGroup.prototype = $.extend({},drawnObj.prototype,{})
+
+var poly = function() {}
+poly.prototype = $.extend({},drawnObj.prototype,{
+    points : function() { return [] },
+    color : "#00FF00",
+    draw : function() {
+        pointsStr = ""
+        for(var i=0; i<this.points.length; i++){
+            pointsStr += this.points[i].toString() + " "
+        }
+        canvas = d3.select("svg")
+        this.drawable = canvas.append("polygon")
+            .attr("points", pointsStr)
+            .attr({ fill: this.color })
+        this.node = this.drawable.node()
+        this.update() // we wanna be in the right place/orientation
+        this.draw = this.update // done with first-time creation, drawing means updating, now
+        return this.drawable
+    }
+})
+
+// classes to contain the isosceles tris described in "Updown generation of Penrose patterns"
 // http://www.sciencedirect.com/science/article/pii/0019357790900058
 tri = function() {
     this.points = [
-        [0,0],
-        [side/2 * cos(this.beta),side/2 * sin(this.beta)],
-        [0,side]
+        [0,side*cos(this.beta)],
+        [side * sin(this.beta),0],
+        [0,-side * cos(this.beta)]
     ]
 }
-$.extend(tri.prototype,drawnObj.prototype)
+tri.prototype = $.extend({},poly.prototype, {
+    alpha : 45, // the angle NOT on the cut
+    beta : 45, // the two angles on the cut (bisected from the rhomb)
+    color: "#000000"    
+})
 
+// 'primed' triangle
 trip = function() {
     tri.apply(this)
-        this.beta *= -1
-    //this.points[1] = [this.points[1][0],-this.points[1][1]] 
+    // primed tris are mirror copies of unprimed tris 
+    this.points[1][0] *= -1 
 }
 $.extend(trip.prototype,tri.prototype)
 
 triA = function() { tri.apply(this) }
 triA.prototype = $.extend({},tri.prototype,{
-    alpha : 36, // the angle NOT on the cut
-    beta : 144/2, // the two angles on the cut (bisected from the rhomb)
+    alpha : 36, 
+    beta : 144/2, 
     color: "#FF0000"    
 })
 
-triAp = function() { trip.apply(this) }
+triAp = function() { 
+    trip.apply(this) 
+}
 triAp.prototype = $.extend({},trip.prototype,{
     alpha : 36, 
     beta : 144/2, 
@@ -93,8 +110,8 @@ triAp.prototype = $.extend({},trip.prototype,{
 
 triB = function() { tri.apply(this) }
 triB.prototype = $.extend({},tri.prototype,{
-    alpha : 108, // the angle NOT on the cut
-    beta : 72/2, // the two angles on the cut (bisected from the rhomb)
+    alpha : 108, 
+    beta : 72/2, 
     color: "#0000FF"    
 })
 
@@ -109,7 +126,7 @@ triBp.prototype = $.extend({},trip.prototype,{
 var rhomb = function() {
     this.points = this.points()
 }    
-rhomb.prototype = $.extend({},drawnObj.prototype,{
+rhomb.prototype = $.extend({},poly.prototype,{
     points : function() { 
         return [ 
             [0,0], 
@@ -142,28 +159,39 @@ thinrhomb.prototype = $.extend({},rhomb.prototype,{
     color : "#0000FF"
 })
 
-//thin = new thinrhomb(); thin.draw()
+//thin = new thinrhomb()
+//thin.rotate(90)
+//thin.draw()
 //
-//thick = new thickrhomb(); thick.draw()
+//thick = new thickrhomb()
+//thick.draw()
 //thick.setRotation(thin.theta*3/2)
 //thick.setPosition([-40,120])
 
+
+rhombA = d3.select("svg").append("g").attr("id","rhombA");
 mytri = new triA(); 
 mytri.draw()
 mytri.setRotation(0)
-mytri.setPosition([200,50])
+mytri.setPosition([200,300])
 
 mytri2 = new triAp();
 mytri2.draw()
-mytri2.setRotation(180)
-mytri2.setPosition([200-mytri.bbox().width,50-mytri.bbox().height*0])
+mytri2.setPosition([200,300])
 
+rhombA.node().appendChild(mytri.drawable.node())
+rhombA.node().appendChild(mytri2.drawable.node())
+
+rhombB = d3.select("svg").append("g").attr("id","rhombB");
 mytri3 = new triB(); 
 mytri3.draw()
 mytri3.setRotation(0)
-mytri3.setPosition([50,200])
+mytri3.setPosition([200,300])
 
 mytri4 = new triBp();
 mytri4.draw()
-mytri4.setRotation(180)
-mytri4.setPosition([50-mytri3.bbox().width,200-mytri3.bbox().height*0])
+mytri4.setRotation(0)
+mytri4.setPosition([200,300])
+
+rhombB.node().appendChild(mytri3.drawable.node())
+rhombB.node().appendChild(mytri4.drawable.node())
