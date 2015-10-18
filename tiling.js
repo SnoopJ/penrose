@@ -26,9 +26,15 @@ drawnObj.prototype = {
         this.matrix = I
             .translate(this.x,this.y)
             .rotate(this.rotation)
-        d3.select(this.node).attr("transform",
+        d3.select(this.node.parentNode).attr("transform",
                 "matrix("+ this.matrix.m().join(' ') +")"
                 )
+    },
+    show: function() {
+        $(this.node).show()
+    },
+    hide: function() {
+        $(this.node).hide()
     },
     translate: function(x,y) {
         this.x += x
@@ -54,9 +60,18 @@ drawnObj.prototype = {
 }
 
 var drawGroup = function() {
+    drawnObj.apply(this)
     this.node = document.createElementNS("http://www.w3.org/2000/svg","g")
+    svg.appendChild( this.node )
 }
-drawGroup.prototype = $.extend({},drawnObj.prototype,{})
+drawGroup.prototype = $.extend({},drawnObj.prototype,{
+    appendChild: function(n) {
+        this.node.appendChild(n)
+    },
+    removeChild: function(n) {
+        this.node.removeChild(n)
+    }
+})
 
 var poly = function() {
     drawnObj.apply(this)
@@ -70,11 +85,9 @@ poly.prototype = $.extend({},drawnObj.prototype,{
             pointsStr += this.points[i].toString() + " "
         }
         canvas = d3.select("svg")
-        this.drawable = canvas.append("polygon")
+        this.drawable = canvas.append("g").append("polygon")
             .attr("points", pointsStr)
             .attr({ fill: this.color })
-//            .classed("draggable",true)
-//            .attr("onmousedown","selectElement(evt)")
         this.node = this.drawable.node()
         this.update() // we wanna be in the right place/orientation
         this.draw = this.update // done with first-time creation, drawing means updating, now
@@ -82,6 +95,18 @@ poly.prototype = $.extend({},drawnObj.prototype,{
     }
 })
 
+function drawTriSides(tr) {
+    sides = [
+    {pt1: tr.points[0], pt2: tr.points[1], color:"FF0000"},
+    {pt1: tr.points[1], pt2: tr.points[2], color:"00FF00"},
+    {pt1: tr.points[2], pt2: tr.points[0], color:"0000FF"},
+    ]
+    console.log(sides)
+    for(s in sides) {
+        s=sides[s]
+        d3.select(tr.node.parentNode).append("line").attr({x1: s.pt1[0], y1: s.pt1[1]}).attr({x2: s.pt2[0], y2: s.pt2[1]}).style({"stroke":s.color, "stroke-width":"5px"}).attr("transform", d3.select(tr.node).attr("transform"))
+    }
+}
 // classes to contain the isosceles tris described in "Updown generation of Penrose patterns"
 // http://www.sciencedirect.com/science/article/pii/0019357790900058
 tri = function() {
@@ -106,15 +131,29 @@ trip = function() {
 }
 $.extend(trip.prototype,tri.prototype)
 
-triA = function() { tri.apply(this) }
+triA = function() { 
+    tri.apply(this) 
+    this.sides = {
+        one: {pt1: this.points[0], pt2: this.points[1]},
+        two: {pt1: this.points[2], pt2: this.points[1]},
+        three: {pt1: this.points[2], pt2: this.points[0]},
+        four: null
+    }
+}
 triA.prototype = $.extend({},tri.prototype,{
     alpha : 36, 
     beta : 144/2, 
-    color: "#FF0000"    
+    color: "#FF0000",
 })
 
 triAp = function() { 
     trip.apply(this) 
+    this.sides = {
+        one: {pt1: this.points[0], pt2: this.points[1]},
+        two: {pt1: this.points[2], pt2: this.points[1]},
+        three: {pt1: this.points[2], pt2: this.points[0]},
+        four: null
+    }
 }
 triAp.prototype = $.extend({},trip.prototype,{
     alpha : 36, 
@@ -183,30 +222,31 @@ thinrhomb.prototype = $.extend({},rhomb.prototype,{
 //thick.setPosition([-40,120])
 
 
-rhombA = d3.select("svg").append("g").attr("id","rhombA");
 mytri = new triA(); 
 mytri.draw()
 mytri.setRotation(0)
 mytri.setPosition(200,300)
+drawTriSides(mytri)
 
 mytri2 = new triAp();
 mytri2.draw()
 mytri2.setPosition(200,300)
+drawTriSides(mytri2)
 
-rhombA.node().appendChild(mytri.drawable.node())
-rhombA.node().appendChild(mytri2.drawable.node())
-
-rhombB = d3.select("svg").append("g").attr("id","rhombB");
 mytri3 = new triB(); 
 mytri3.draw()
-mytri3.setRotation(0)
-mytri3.setPosition(200,300)
+mytri3.setRotation(90)
+mytri3.setPosition(200,400)
+drawTriSides(mytri3)
 
 mytri4 = new triBp();
 mytri4.draw()
-mytri4.setRotation(0)
-mytri4.setPosition(200,300)
+mytri4.setRotation(90)
+mytri4.setPosition(200,400)
+drawTriSides(mytri4)
 
-rhombB.node().appendChild(mytri3.drawable.node())
-rhombB.node().appendChild(mytri4.drawable.node())
+//rhombB = new drawGroup();
+//rhombB.appendChild(mytri3.drawable.node())
+//rhombB.appendChild(mytri4.drawable.node())
 
+d3.selectAll("polygon").attr("fill","black")
