@@ -20,43 +20,55 @@ drawnObj.prototype = {
     },
     draw : function() { this.update() },
     update : function() { // won't call this directly, but once draw() does its thing, it'll map here
-        bbox = this.bbox()
-        center = [ bbox.x + bbox.width/2, bbox.y + bbox.height/2 ]
-        ang = this.rotation
-        this.matrix = I
-            .translate(this.x,this.y)
-            .rotate(this.rotation)
         d3.select(this.node.parentNode).attr("transform",
                 "matrix("+ this.matrix.m().join(' ') +")"
                 )
     },
     show: function() {
-        $(this.node).show()
+        for ( var i=0, len=sibs.length; i < len; i++ ) {
+            $(sibs[i]).show()
+        }
     },
     hide: function() {
-        $(this.node).hide()
+        sibs = this.node.parentNode.children
+        for ( var i=0, len=sibs.length; i < len; i++ ) {
+            $(sibs[i]).hide()
+        }
     },
     translate: function(x,y) {
         this.x += x
         this.y += y
+        this.matrix = this.matrix.translate( x, y )
         this.draw()
     },
     setPosition: function(x,y) {
+        this.matrix = this.matrix.translate( -this.x, -this.y )
         this.x = x
         this.y = y
+        this.matrix = this.matrix.translate( this.x, this.y )
         this.draw()
     },
     setRotation: function(ang) {
-        this.rotation = ang
+        this.matrix = I.translate(this.x,this.y).rotate(ang)
         this.draw()
     },
     rotate : function(ang) {
-        this.rotation += ang
+        this.matrix = this.matrix.rotate(ang)
         this.draw()
+    },
+    rotateAroundPoint(pt,ang) {
+        shift = [ pt[0] - this.x, pt[1] - this.y ]
+        // shift, rotate, shift back; pretty sure this is correct
+        this.matrix = this.matrix.translate( shift[0], shift[1] )
+            .rotate(ang)
+            .translate( -shift[0], -shift[1] ) 
+        this.draw()
+    },
+    rotateAroundLocalPoint(pt,ang) {
+        this.rotateAroundPoint( [ this.x + pt[0], this.y + pt[1] ], ang )
     },
     x: 0,
     y: 0,
-    rotation: 0
 }
 
 var drawGroup = function() {
@@ -109,6 +121,8 @@ function drawTriSides(tr) {
 }
 // classes to contain the isosceles tris described in "Updown generation of Penrose patterns"
 // http://www.sciencedirect.com/science/article/pii/0019357790900058
+// 
+// local origin is the center of the defining cut
 tri = function() {
     poly.apply(this)
     this.points = [
@@ -225,28 +239,12 @@ thinrhomb.prototype = $.extend({},rhomb.prototype,{
 mytri = new triA(); 
 mytri.draw()
 mytri.setRotation(0)
-mytri.setPosition(200,300)
+mytri.setPosition(100,100)
 drawTriSides(mytri)
 
 mytri2 = new triAp();
 mytri2.draw()
-mytri2.setPosition(200,300)
+mytri2.setPosition(100,100)
 drawTriSides(mytri2)
-
-mytri3 = new triB(); 
-mytri3.draw()
-mytri3.setRotation(90)
-mytri3.setPosition(200,400)
-drawTriSides(mytri3)
-
-mytri4 = new triBp();
-mytri4.draw()
-mytri4.setRotation(90)
-mytri4.setPosition(200,400)
-drawTriSides(mytri4)
-
-//rhombB = new drawGroup();
-//rhombB.appendChild(mytri3.drawable.node())
-//rhombB.appendChild(mytri4.drawable.node())
 
 d3.selectAll("polygon").attr("fill","black")
