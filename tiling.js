@@ -113,7 +113,6 @@ function drawTriSides(tr) {
     {pt1: tr.points[1], pt2: tr.points[2], color:"00FF00"},
     {pt1: tr.points[2], pt2: tr.points[0], color:"0000FF"},
     ]
-    console.log(sides)
     for(s in sides) {
         s=sides[s]
         d3.select(tr.node.parentNode).append("line").attr({x1: s.pt1[0], y1: s.pt1[1]}).attr({x2: s.pt2[0], y2: s.pt2[1]}).style({"stroke":s.color, "stroke-width":"5px"}).attr("transform", d3.select(tr.node).attr("transform"))
@@ -247,21 +246,40 @@ thinrhomb.prototype = $.extend({},rhomb.prototype,{
 //thick.setRotation(thin.theta*3/2)
 //thick.setPosition([-40,120])
 
+function joinBptoA(Bp,A) {
+    Bp.setPosition(A.x - Bp.points[1][0], A.y + Bp.points[1][1] + A.points[0][1]) 
+    Bp.rotateAroundLocalPoint(Bp.points[1], Bp.beta*1) // match up edges
+    g = document.createElementNS("http://www.w3.org/2000/svg","g")
+    g.appendChild(A.node.parentNode)
+    g.appendChild(Bp.node.parentNode)
+    return g
+}
+
+function joinBtoAp(B,Ap) {
+    B.setPosition(Ap.x - B.points[1][0], Ap.y + B.points[1][1] + Ap.points[0][1]) 
+    B.rotateAroundLocalPoint(B.points[1], B.beta*1) // match up edges
+    g = document.createElementNS("http://www.w3.org/2000/svg","g")
+    d3.select(g).attr("id","tempid")
+    g.appendChild(Ap.node.parentNode)
+    g.appendChild(B.node.parentNode)
+    return g
+}
 
 mytri = new triA() 
 mytri.setRotation(0)
 mytri.setPosition(100,100)
 drawTriSides(mytri)
 
+mytri3 = new triBp()
+//mytri3.setPosition(100 - mytri3.points[1][0], 100 + mytri3.points[1][1] + mytri.points[0][1])
+//mytri3.rotateAroundLocalPoint(mytri3.points[1], mytri3.beta*1) // match up edges
+drawTriSides(mytri3)
+
 mytri2 = new triAp()
 mytri2.setPosition( 100 - 2*mytri2.points[1][0], 100 )
 mytri2.rotateAroundLocalPoint( mytri2.points[1], 180+mytri2.alpha ) // match up edges
 drawTriSides(mytri2)
 
-mytri3 = new triBp()
-mytri3.setPosition( 100 - mytri3.points[1][0], 100 + mytri3.points[1][1] + mytri.points[0][1])
-mytri3.rotateAroundLocalPoint( mytri3.points[1], mytri3.beta*1 ) // match up edges
-drawTriSides(mytri3)
 
 mytri4 = new triB()
 mytri4.setPosition(100 + mytri.points[1][0],100 - mytri4.points[2][1])
@@ -269,9 +287,10 @@ mytri4.rotateAroundLocalPoint( mytri4.points[2], 180 ) // match up edges
 drawTriSides(mytri4)
 
 masterg = d3.select("svg").append("g").attr("transform","translate(200,00) rotate(45) ").attr("id","masterg").node()
-masterg.appendChild(mytri.node.parentNode)
+masterg.appendChild(joinBptoA(mytri3,mytri))
+//masterg.appendChild(joinBtoAp(mytri2,mytri4))
+
 masterg.appendChild(mytri2.node.parentNode)
-masterg.appendChild(mytri3.node.parentNode)
 masterg.appendChild(mytri4.node.parentNode)
 
 d3.selectAll("polygon").attr("fill","black")
